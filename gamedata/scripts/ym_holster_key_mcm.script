@@ -1,0 +1,389 @@
+local modname = "holster_key"
+local mcm_keybinds = ui_mcm and ui_mcm.key_hold 
+local CreateTimeEvent = demonized_time_events and demonized_time_events.CreateTimeEvent or CreateTimeEvent
+
+--------------------------------------------
+--#region MCM
+--------------------------------------------
+
+
+options = {
+    id = modname,
+    sh = true,
+    gr = {
+        {
+            id = "title",
+            type = "slide",
+            link = "ui_options_slider_economy_diff",
+            text = "ui_mcm_" .. modname .. "_title",
+            size = {512, 50},
+            spacing = 20
+        },
+        {id = "title_desc", type = "desc", text = "ui_mcm_" .. modname .. "_title_desc"},
+        {
+            id = "holster_keybind",
+            type = "key_bind",
+            val = 2,
+            def = DIK_keys.DIK_R
+        },
+        {
+            id = "holster_mode",
+            type = ui_mcm.kb_mod_radio,
+            val = 2,
+            def = 0,
+            hint = "mcm_kb_mode",
+            content = {
+                -- excluded double tap
+                { 0, "mcm_kb_mode_press" },
+                { 1, "mcm_kb_mode_hold" }
+            },
+        },
+        {
+            id = "holster_modifier",
+            type = ui_mcm.kb_mod_radio,
+            val = 2,
+            def = 0,
+            hint = "mcm_kb_modifier",
+            content = {
+                { 0, "mcm_kb_mod_none" },
+                { 1, "mcm_kb_mod_shift" },
+                { 2, "mcm_kb_mod_ctrl" },
+                { 3, "mcm_kb_mod_alt" }
+            }
+        },
+    },
+}
+-- MCM
+-- Load the defaults
+local function load_defaults()
+	local t = {}
+	local op = options
+	for i, v in ipairs(op.gr) do
+		if v.def ~= nil then
+			t[v.id] = v.def
+		end
+	end
+	return t
+end
+
+local settings = load_defaults()
+
+local function load_settings()
+	settings = load_defaults()
+	if ui_mcm then
+		for k, v in pairs(settings) do
+			settings[k] = ui_mcm.get(modname .. "/" .. k)
+		end
+	end
+end
+
+function get_settings()
+    return settings
+end
+
+
+function get_config(key)
+    if ui_mcm then
+        return ui_mcm.get(modname .. "/" .. key)
+    else
+        return settings[key]
+    end
+end
+
+--#endregion--------------------------------
+
+
+--#region DEBUG ----------------------------------------
+
+local DEBUG = true
+-- modname = "Holster Key"
+
+local function print_table (tbl, indent)
+    local g_type = type
+    if not indent then
+        indent = 0
+    end
+
+    utils_data.debug_write(string.rep(" ", indent) .. "{")
+
+    indent = indent + 2
+
+    if (g_type(tbl) == "userdata") then        
+        utils_data.debug_write("<userdata>,\n")
+    else
+        for k, v in pairs(tbl) do
+            local toprint = string.rep(" ", indent)
+
+            if (g_type(k) == "number") then
+                toprint = toprint .. "[" .. k .. "] = "
+            elseif (g_type(k) == "string") then
+                toprint = toprint  .. k ..  " = "
+            end
+
+            if (g_type(v) == "number") then
+                utils_data.debug_write(toprint .. v .. ",")
+            elseif (g_type(v) == "string") then
+                utils_data.debug_write(toprint .. "\"" .. v .. "\",")
+            elseif (g_type(v) == "table") then
+                utils_data.debug_write(toprint)
+                print_table(v, indent + 2)
+            else
+                utils_data.debug_write(toprint .. "\"" .. tostring(v) .. "\",")
+            end
+        end
+    end
+
+    utils_data.debug_write(string.rep(" ", indent-2) .. "}")
+end	
+
+
+--- Flattens a table of any nested status into a single string
+---@param o table
+---@return string 
+local function dump_table(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump_table(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
+
+local function log(log_type, output, ...)
+    if not output then
+        utils_data.debug_write("[" .. modname .. "] "..log_type..": ".."(nil)")
+        callstack()
+    else
+        -- pulled from _g.script
+        -- more var subbing
+        if (select('#', ...) >= 1) then
+            local i = 0
+            local p = { ... }
+            local function sr(a)
+                i = i + 1
+                if (type(p[i]) == 'userdata') then
+                    if (p[i].x and p[i].y) then
+                        return vec_to_str(p[i])
+                    end
+                    return 'userdata'
+                end
+                return tostring(p[i])
+            end
+            output = string.gsub(output, "%%s", sr)
+        end
+        printf("[" .. modname .. "] " .. log_type .. ": " .. output, ...)
+    end
+end
+
+function debug(output,...)
+    if not DEBUG then return end
+    log("DEBUG", output, ...)
+end
+
+function info(output,...)
+    log("INFO ", output, ...)
+end
+
+function warn(output,...)
+    log("WARN ", output, ...)
+end
+
+function error(output,...)
+    log("ERROR", output, ...)
+end
+
+function debug_tip(text, delay,...)
+    debug(text, ...)
+
+    local text = "[" .. modname .. "] "..tostring(text)
+
+    if not db.actor then
+        return
+    end
+    
+    local ico = "ui_inGame2_Dengi_otdani"
+    local text_color = utils_xml.get_color("pda_white")
+
+    text = text_color .. text
+
+    if delay == nil then
+        delay = 6000
+    end
+
+    news_manager.send_tip(db.actor, text, nil, ico, delay)
+end
+
+local function debug_print_table(caption, tbl_options)
+    if not DEBUG then return end
+
+    if not tbl_options then 
+        info("debug_print_table: tbl_options is nil")
+        return 
+    end
+
+    local tbl = {}
+    if type(tbl_options[1]) ~="table" then
+        tbl = tbl_options
+    else
+        tbl = tbl_options[1]
+    end
+
+    local indent = tbl_options[2] or 0
+
+    debug(caption)
+    print_table(tbl, indent)
+end
+
+local function info_print_table(caption, tbl_options)
+    if not DEBUG then return end
+    if not tbl_options then 
+        info("info_print_table: tbl_options is nil")
+        return 
+    end
+
+    local tbl = {}
+
+    if type(tbl_options[1]) ~="table" then
+        tbl = tbl_options
+    else
+        tbl = tbl_options[1]
+    end
+
+    local indent = tbl_options[2] or 0
+
+    info(caption)
+    print_table(tbl, indent)
+end
+
+
+
+function open_specific_mcm(path)
+    if not DEBUG then return end
+
+    if ui_mcm then
+        exec_console_cmd("main_menu")
+
+        local function open_mcm_event(path)
+            ui_mcm.open_to(path)
+            return true
+        end
+
+
+        if demonized_time_events then
+            demonized_time_events.CreateTimeEvent("ym_open_mcm", "open_mcm",1, open_mcm_event, path)
+        else
+            CreateTimeEvent("ym_open_mcm", "open_mcm",1, open_mcm_event, path)
+        end
+    end
+end
+
+--#endregion------------------------------------------------------------------
+
+--------------------------------------------
+--#region Utilities
+--------------------------------------------
+
+local empty_slot = 0
+
+local valid_slots = {1,2,3,4,5,6,8}
+
+function is_valid_slot(s)
+    for _, v in pairs(valid_slots) do
+        if v == s then return true end
+    end
+    return false
+end
+
+
+
+function holster()
+    if (not db.actor) or (not level.present()) and (actor_menu.is_hud_free()) then return end
+    debug("holstering")
+    local function h()
+        db.actor:activate_slot(empty_slot)
+        return true
+    end
+
+    CreateTimeEvent(modname, modname, 0, h)
+end
+
+
+--#endregion--------------------------------
+
+
+--------------------------------------------
+--#region Callbacks
+--------------------------------------------
+
+
+function on_key_press(dik)
+    local keybind = settings.holster_keybind
+    if (dik ~= keybind) then return end
+
+    local mode = settings.holster_mode
+    local modifier = settings.holster_modifier
+
+	if (mode == 0) 
+    and ((modifier > 0 and ui_mcm.get_mod_key(modifier)) or (modifier == 0))
+    and (is_valid_slot(db.actor:active_slot()))
+    then
+        debug("on_key_press | holster")
+        holster()
+        -- CreateTimeEvent(modname, modname, 0, function()
+        --     db.actor:activate_slot(0)
+        --     return true
+        -- end)
+    end
+end
+
+function on_key_hold(dik)
+    local keybind = settings.holster_keybind
+    if (dik ~= keybind) then return end
+
+    local mode = settings.holster_mode
+    local modifier = settings.holster_modifier
+
+	if mcm_keybinds and (mode == 1) and ui_mcm.key_hold(modname, dik)
+	and ((modifier > 0 and ui_mcm.get_mod_key(modifier)) or (modifier == 0)) 
+    and (is_valid_slot(db.actor:active_slot()))
+    then
+        debug("on_key_hold | holster")
+        holster()
+    end
+end
+
+function on_mcm_load()
+    return options
+end
+
+function on_option_change(mcm)
+	if not mcm then return end
+
+	load_settings()
+
+	if settings.holster_mode == 1 then
+		debug("switching to hold press")
+		UnregisterScriptCallback("on_key_press", on_key_press)
+		RegisterScriptCallback("on_key_hold", on_key_hold)
+	else
+		debug("switching to simple press")
+		RegisterScriptCallback("on_key_press", on_key_press)
+		UnregisterScriptCallback("on_key_hold", on_key_hold)
+	end
+
+end
+
+--#endregion--------------------------------
+
+function on_game_start()
+    RegisterScriptCallback("on_key_press", on_key_press)
+    RegisterScriptCallback("on_key_hold", on_key_hold)
+    RegisterScriptCallback("on_option_change", on_option_change)
+
+    on_option_change(mcm_keybinds)
+end
