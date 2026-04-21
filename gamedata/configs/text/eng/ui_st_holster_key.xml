@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<string_table>
+    <!-- MCM menu entry  -->
+    <string id="ui_mcm_menu_holster_key">
+        <text>Holster Key</text>
+    </string>
+
+    <string id="ui_mcm_holster_key_title">
+        <text>Holster Key</text>
+    </string>
+
+    <string id="ui_mcm_holster_key_holster_keybind">
+        <text>Holster Keybind</text>
+    </string>
+
+    <string id="ui_mcm_holster_key_holster_mode">
+        <text>Holster Tap Mode</text>
+    </string>
+
+    <string id="ui_mcm_holster_key_holster_modifier">
+        <text>Holster Key Modifier</text>
+    </string>
+
+
+</string_table>
