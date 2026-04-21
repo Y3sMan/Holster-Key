@@ -1,4 +1,4 @@
-local modname = "holster_key"
+local mcm_name = "holster_key"
 local mcm_keybinds = ui_mcm and ui_mcm.key_hold 
 local CreateTimeEvent = demonized_time_events and demonized_time_events.CreateTimeEvent or CreateTimeEvent
 
@@ -8,18 +8,17 @@ local CreateTimeEvent = demonized_time_events and demonized_time_events.CreateTi
 
 
 options = {
-    id = modname,
+    id = mcm_name,
     sh = true,
     gr = {
         {
             id = "title",
             type = "slide",
-            link = "ui_options_slider_economy_diff",
-            text = "ui_mcm_" .. modname .. "_title",
+            link = "ui_options_slider_player",
+            text = "ui_mcm_" .. mcm_name .. "_title",
             size = {512, 50},
             spacing = 20
         },
-        {id = "title_desc", type = "desc", text = "ui_mcm_" .. modname .. "_title_desc"},
         {
             id = "holster_keybind",
             type = "key_bind",
@@ -72,7 +71,7 @@ local function load_settings()
 	settings = load_defaults()
 	if ui_mcm then
 		for k, v in pairs(settings) do
-			settings[k] = ui_mcm.get(modname .. "/" .. k)
+			settings[k] = ui_mcm.get(mcm_name .. "/" .. k)
 		end
 	end
 end
@@ -84,7 +83,7 @@ end
 
 function get_config(key)
     if ui_mcm then
-        return ui_mcm.get(modname .. "/" .. key)
+        return ui_mcm.get(mcm_name .. "/" .. key)
     else
         return settings[key]
     end
@@ -96,7 +95,7 @@ end
 --#region DEBUG ----------------------------------------
 
 local DEBUG = true
--- modname = "Holster Key"
+local modname = "Holster Key"
 
 local function print_table (tbl, indent)
     local g_type = type
@@ -309,7 +308,7 @@ function holster()
         return true
     end
 
-    CreateTimeEvent(modname, modname, 0, h)
+    CreateTimeEvent(mcm_name, mcm_name, 0, h)
 end
 
 
@@ -334,7 +333,7 @@ function on_key_press(dik)
     then
         debug("on_key_press | holster")
         holster()
-        -- CreateTimeEvent(modname, modname, 0, function()
+        -- CreateTimeEvent(mcm_name, mcm_name, 0, function()
         --     db.actor:activate_slot(0)
         --     return true
         -- end)
@@ -348,7 +347,7 @@ function on_key_hold(dik)
     local mode = settings.holster_mode
     local modifier = settings.holster_modifier
 
-	if mcm_keybinds and (mode == 1) and ui_mcm.key_hold(modname, dik)
+	if mcm_keybinds and (mode == 1) and ui_mcm.key_hold(mcm_name, dik)
 	and ((modifier > 0 and ui_mcm.get_mod_key(modifier)) or (modifier == 0)) 
     and (is_valid_slot(db.actor:active_slot()))
     then
